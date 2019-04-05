@@ -33,6 +33,37 @@ class KVMUserSpaceMemoryRegion(Structure):
         ('userspace_addr', c_uint64)
     ]
 
+class KVMARMRegs(Structure):
+    _fielfs_ = [
+        ('r0', c_uint32),
+        ('r1', c_uint32),
+        ('r2', c_uint32),
+        ('r3', c_uint32),
+        ('r4', c_uint32),
+        ('r5', c_uint32),
+        ('r6', c_uint32),
+        ('r7', c_uint32),
+        ('r8', c_uint32),
+        ('r9', c_uint32),
+        ('r10', c_uint32),
+        ('r11', c_uint32),
+        ('r12', c_uint32),
+        ('r13', c_uint32),
+        ('r14', c_uint32),
+        ('r15', c_uint32),
+    ]
+
+class KVMARMv7mSRegs(Structure):
+    _fielfs_ = [
+        ('other_sp', c_uint32),
+        ('vecbase', c_uint32),
+        ('basepri', c_uint32),
+        ('control', c_uint32),
+        ('current_sp', c_uint64),
+        ('exception', c_uint64),
+        ('pending_exception', c_uint64),
+        ('thumb', c_uint32),
+    ]
 
 class KVMRegs(Structure):
     _fields_ = [
@@ -94,6 +125,8 @@ class KVMDTable(Structure):
 KVM_NR_INTERRUPTS = 256
 
 
+
+
 class KVMSRegs(Structure):
     _fields_ = [
         ('cs', KVMSegment),
@@ -117,7 +150,7 @@ class KVMSRegs(Structure):
 
         ('efer', c_uint64),
         ('apic_base', c_uint64),
-        ('interrupt_bitmap', c_uint64 * ((KVM_NR_INTERRUPTS + 63) / 64)),
+        ('interrupt_bitmap', c_uint64 * int(((KVM_NR_INTERRUPTS + 63) / 64))),
     ]
 
 
@@ -276,10 +309,13 @@ KVM_SET_USER_MEMORY_REGION = IOW(KVMIO, 0x46, KVMUserSpaceMemoryRegion)
 # KVM CPU IOCTLs
 KVM_RUN = IO(KVMIO, 0x80)
 
-KVM_GET_REGS = IOR(KVMIO, 0x81, KVMRegs)
-KVM_SET_REGS = IOW(KVMIO, 0x82, KVMRegs)
-KVM_GET_SREGS = IOR(KVMIO, 0x83, KVMSRegs)
-KVM_SET_SREGS = IOW(KVMIO, 0x84, KVMSRegs)
+KVM_GET_REGS = IOR(KVMIO, 0x81, KVMARMRegs)
+KVM_SET_REGS = IOW(KVMIO, 0x82, KVMARMRegs)
+KVM_GET_SREGS = IOR(KVMIO, 0x83, KVMARMv7mSRegs)
+KVM_SET_SREGS = IOW(KVMIO, 0x84, KVMARMv7mSRegs)
+
+
+#define KVM_SET_ONE_REG _IOW(KVMIO, 0xac, struct kvm_one_reg)
 
 #########################################################################################
 # The KVM structures and APIs below are not part of the standard KVM interface.

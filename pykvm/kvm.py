@@ -174,48 +174,47 @@ class VCPU(object):
         self._pointer = mmap.mmap(self._vcpu_fd, self._vcpu_size)
         self._run_obj = KVMRun.from_buffer(self._pointer)
 
-    def init_state(self, rip=0, rsp=0, bits=32):
-        sregs = KVMSRegs()
-        fcntl.ioctl(self._vcpu_fd, KVM_GET_SREGS, sregs)
+    def init_state(self, initial_msp, initial_pc):
+        armv7msregs = KVMARMv7mSRegs()
+        armregs = KVMARMRegs()
 
-        if bits == 16:
-            sregs.cs.base = 0
-            sregs.cs.selector = 0
-        elif bits == 32:
-            # Initialize the bare minimum. We just initialize the shadow part of the segments registers.
-            # It is not necessary to set up the GDT/IDT/LDT as long as the guest does not modify segment registers
-            # and there are no interrupts (hardware or software).
-            sregs.cs = _get_32bit_code_segment()
-            sregs.ds = _get_32bit_data_segment()
-            sregs.es = sregs.ds
-            sregs.ss = sregs.ds
-            sregs.fs = sregs.ds
-            sregs.gs = sregs.ds
+        # Initialize the bare minimum. We just initialize the shadow part of the segments registers.
+        # It is not necessary to set up the GDT/IDT/LDT as long as the guest does not modify segment registers
+        # and there are no interrupts (hardware or software).
 
-            # Enable protected mode
-            sregs.cr0 = 0x1
-        else:
-            raise ValueError('Unsupported number of bits %d' % bits)
+        #Unlike A/R profile, M profile defines the reset LR value
+        armregs.r0 = 0x0
+        armregs.r1 = 0x0
+        armregs.r2 = 0x0
+        armregs.r3 = 0x0
+        armregs.r4 = 0x0
+        armregs.r5 = 0x0
+        armregs.r6 = 0x0
+        armregs.r7 = 0x0
+        armregs.r8 = 0x0
+        armregs.r9 = 0x0
+        armregs.r10 = 0x0
+        armregs.r11 = 0x0
+        armregs.r12 = 0x0
 
-        fcntl.ioctl(self._vcpu_fd, KVM_SET_SREGS, sregs)
+        armregs.r14 = 0xffffffff;
+        armregs.r13 = initial_msp
+        armregs.r15 = initial_pc & (~1)
+        armv7msregs.thumb = initial_pc & 1
 
-        regs = KVMRegs()
-        fcntl.ioctl(self._vcpu_fd, KVM_GET_REGS, regs)
-        regs.rip = rip
-        regs.rsp = rsp
-        regs.rflags = 2
-        fcntl.ioctl(self._vcpu_fd, KVM_SET_REGS, regs)
+        fcntl.ioctl(self._vcpu_fd, KVM_SET_SREGS, armv7msregs)
+        fcntl.ioctl(self._vcpu_fd, KVM_SET_REGS, armregs)
 
     def dump_regs(self):
         """
         Displays the content of guest CPU registers.
         """
 
-        regs = KVMRegs()
+        regs = KVMARMRegs()
         fcntl.ioctl(self._vcpu_fd, KVM_GET_REGS, regs)
-        logger.info('rax=%#lx rbx=%#lx rcx=%#lx rdx=%#lx', regs.rax, regs.rbx, regs.rcx, regs.rdx)
-        logger.info('rsi=%#lx rdi=%#lx rbp=%#lx rsp=%#lx', regs.rsi, regs.rdi, regs.rbp, regs.rsp)
-        logger.info('rip=%#lx', regs.rip)
+        logger.info('r0=%#lx r1=%#lx r2=%#lx r3=%#lx', regs.r1, regs.r2, regs.r3, regs.r4)
+        #logger.info('rsi=%#lx rdi=%#lx rbp=%#lx rsp=%#lx', regs.rsi, regs.rdi, regs.rbp, regs.rsp)
+        #logger.info('rip=%#lx', regs.rip)
 
     # pylint: disable=too-many-branches
     def run(self):
@@ -320,7 +319,7 @@ class VM(object):
         fcntl.ioctl(self._vm_fd, KVM_SET_USER_MEMORY_REGION, kvm_region)
 
         self._vcpu = VCPU(kvm_fd, self._vm_fd)
-        self._vcpu.init_state()
+        #self._vcpu.init_state()
 
     def run(self):
         """
@@ -361,8 +360,8 @@ def main():
     # TODO: make log level configurable
     parser = ArgumentParser()
     parser.add_argument('--memsize', type=lambda x: int(x, 0), default=0x20000, help='Size of guest memory in bytes')
-    parser.add_argument('--rip', type=lambda x: int(x, 0), default=0x0, help='Initial program counter')
-    parser.add_argument('--rsp', type=lambda x: int(x, 0), default=0xfff0, help='Initial stack pointer')
+    #parser.add_argument('--rip', type=lambda x: int(x, 0), default=0x0, help='Initial program counter')
+    #parser.add_argument('--rsp', type=lambda x: int(x, 0), default=0xfff0, help='Initial stack pointer')
     parser.add_argument('--org', type=lambda x: int(x, 0), default=0x0, help='Load base of the binary')
     parser.add_argument('--dump', type=lambda x: int(x, 0), default=0x1000, help='Address to dump when complete')
     parser.add_argument('--dump-size', type=lambda x: int(x, 0), default=0x100, help='How many bytes to dump')
@@ -379,15 +378,20 @@ def main():
     logging.info('KVM API version: %d', api_version)
 
     vm = VM(fp, args.memsize)
-    vm.vcpu.init_state(rip=args.rip, rsp=args.rsp, bits=32)
 
     # Load the input binary into memory
     with open(args.binary[0], 'rb') as fp:
         logger.info('Writing binary to offset %#x', args.org)
         vm.ram.write(args.org, fp.read())
 
+    initial_msp = vm.ram.read(args.org, 0x4)
+    initial_pc = vm.ram.read(args.org+4, 0x4)
+
+    # init state after load the binary, because msp and pc have to read from the binary
+    vm.vcpu.init_state(initial_msp,initial_pc)
+
     logger.info('Binary before execution')
-    hexdump(vm.ram.read(args.org, 0x100))
+    hexdump(vm.ram.read(args.org, 0x8))
 
     vm.run()
 

@@ -17,27 +17,37 @@
 # LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
+ARCH=arm
+CROSS_COMPILE = arm-none-eabi-
 
+CC = $(CROSS_COMPILE)gcc
+LD = $(CROSS_COMPILE)ld
+GDB = $(CROSS_COMPILE)gdb
+OBJCOPY = $(CROSS_COMPILE)objcopy
+READELF = $(CROSS_COMPILE)readelf
 
 quiet-command = $(if $(V),$1,$(if $(2),@echo $2 && $1, @$1))
 
-LD_SCRIPT = 32.ld
+LD_SCRIPT = arm.ld
 
-CFLAGS = -std=c99 -O3 -g -ffreestanding  -nostdlib -fno-omit-frame-pointer -mno-red-zone
-CFLAGS += -fno-exceptions -fno-asynchronous-unwind-tables -m32 $(EXTRA_CFLAGS)
+CFLAGS = -std=c99 -O3 -g -ffreestanding  -nostdlib -fno-omit-frame-pointer -mthumb -mcpu=cortex-m3
+CFLAGS += -fno-exceptions -fno-asynchronous-unwind-tables $(EXTRA_CFLAGS)
 
 .PHONY : all clean
+
+boot.o: boot.s
+	$(CC) -mcpu=cortex-m3 -g -c boot.s -o boot.o
 
 %.o: %.c
 	$(call quiet-command,$(CC) $(CFLAGS) -c -o $@ $^,"  Building $@")
 
 sample.bin: sample
-	objcopy -O binary --rename-section .data=.rodata,alloc,load,data,contents,readonly $^ $@
+	$(OBJCOPY) -O binary --rename-section .data=.rodata,alloc,load,data,contents,readonly $^ $@
 
-sample: sample.o
-	$(LD) -T $(LD_SCRIPT)  -o $@ $^
+sample: boot.o sample.o
+	$(LD) -T $(LD_SCRIPT) -o $@ $^
 
 clean:
-	rm -f sample.bin sample.o sample
+	rm -f boot.o sample.bin sample.o sample
 
 all: sample.bin

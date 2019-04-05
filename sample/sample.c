@@ -64,5 +64,5 @@ void main(void)
 
     // Returning from this function will behave unpredictably, most likely causing
     // a crash of the VM. So we use the halt instruction instead, to indicate that we are done.
-    __asm__("hlt");
+    __asm__("WFI");
 }
