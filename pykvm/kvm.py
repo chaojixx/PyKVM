@@ -23,6 +23,7 @@ import errno
 import fcntl
 import logging
 import mmap
+import struct
 import os
 from argparse import ArgumentParser
 
@@ -199,10 +200,15 @@ class VCPU(object):
 
         armregs.r14 = 0xffffffff;
         armregs.r13 = initial_msp
-        armregs.r15 = initial_pc & (~1)
-        armv7msregs.thumb = initial_pc & 1
-
+        armregs.r15 = initial_pc & (~0x00000001)
+        armv7msregs.thumb = initial_pc & (0x00000001)
+        armv7msregs.control = 0x0
+        print(armregs.r13)
+        print(armregs.r15)
+        print(armv7msregs.thumb)
+        #print('0x%x',KVM_SET_SREGS)
         fcntl.ioctl(self._vcpu_fd, KVM_SET_SREGS, armv7msregs)
+
         fcntl.ioctl(self._vcpu_fd, KVM_SET_REGS, armregs)
 
     def dump_regs(self):
@@ -386,12 +392,18 @@ def main():
 
     initial_msp = vm.ram.read(args.org, 0x4)
     initial_pc = vm.ram.read(args.org+4, 0x4)
-
+    #initial_msp = initial_msp_str[::-1]
+    #print (initial_msp)
+    #initial_msp = bytes.decode(initial_msp,encoding='hex')
+    #initial_msp = int(initial_msp_str)
+    #initial_pc = initial_pc[::-1]
+    initial_msp = struct.unpack('i',initial_msp)[0]
+    initial_pc = struct.unpack('i',initial_pc)[0]
     # init state after load the binary, because msp and pc have to read from the binary
     vm.vcpu.init_state(initial_msp,initial_pc)
 
     logger.info('Binary before execution')
-    hexdump(vm.ram.read(args.org, 0x8))
+    hexdump(vm.ram.read(args.org, 0x100))
 
     vm.run()
 

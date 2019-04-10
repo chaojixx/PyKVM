@@ -18,7 +18,7 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-from ctypes import Structure, Union, c_uint8, c_uint16, c_uint32, c_uint64, c_char_p
+from ctypes import Structure, Union, c_uint8, c_uint16, c_uint32, c_uint64, c_char_p, c_int32
 from enum import IntEnum
 
 from ioctl_opt import IO, IOW, IOR
@@ -34,7 +34,7 @@ class KVMUserSpaceMemoryRegion(Structure):
     ]
 
 class KVMARMRegs(Structure):
-    _fielfs_ = [
+    _fields_ = [
         ('r0', c_uint32),
         ('r1', c_uint32),
         ('r2', c_uint32),
@@ -54,14 +54,14 @@ class KVMARMRegs(Structure):
     ]
 
 class KVMARMv7mSRegs(Structure):
-    _fielfs_ = [
+    _fields_ = [
         ('other_sp', c_uint32),
         ('vecbase', c_uint32),
         ('basepri', c_uint32),
         ('control', c_uint32),
-        ('current_sp', c_uint64),
-        ('exception', c_uint64),
-        ('pending_exception', c_uint64),
+        ('current_sp', c_int32),
+        ('exception', c_int32),
+        ('pending_exception', c_int32),
         ('thumb', c_uint32),
     ]
 
