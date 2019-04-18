@@ -207,19 +207,21 @@ class VCPU(object):
         print(armregs.r15)
         print(armv7msregs.thumb)
         #print('0x%x',KVM_SET_SREGS)
-        fcntl.ioctl(self._vcpu_fd, KVM_SET_SREGS, armv7msregs)
+        fcntl.ioctl(self._vcpu_fd, KVM_SET_M_SREGS, armv7msregs)
 
-        fcntl.ioctl(self._vcpu_fd, KVM_SET_REGS, armregs)
+        fcntl.ioctl(self._vcpu_fd, KVM_SET_M_REGS, armregs)
 
     def dump_regs(self):
         """
         Displays the content of guest CPU registers.
         """
 
-        regs = KVMARMRegs()
-        fcntl.ioctl(self._vcpu_fd, KVM_GET_REGS, regs)
-        logger.info('r0=%#lx r1=%#lx r2=%#lx r3=%#lx', regs.r1, regs.r2, regs.r3, regs.r4)
-        #logger.info('rsi=%#lx rdi=%#lx rbp=%#lx rsp=%#lx', regs.rsi, regs.rdi, regs.rbp, regs.rsp)
+        armregs = KVMARMRegs()
+        armv7msregs = KVMARMv7mSRegs()
+        fcntl.ioctl(self._vcpu_fd, KVM_GET_M_REGS, armregs)
+        logger.info('r0=%#lx r1=%#lx r2=%#lx r3=%#lx', armregs.r1, armregs.r2, armregs.r3, armregs.r4)
+        fcntl.ioctl(self._vcpu_fd, KVM_GET_M_SREGS, armv7msregs)
+        logger.info('thumb=%#lx control=%#lx', armv7msregs.thumb, armv7msregs.control)
         #logger.info('rip=%#lx', regs.rip)
 
     # pylint: disable=too-many-branches
