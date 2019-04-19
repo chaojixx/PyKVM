@@ -25,7 +25,7 @@
 #include <s2e/s2e.h>
 #endif
 
-#define DATA_START 0x1000
+#define DATA_START 0x20000
 #define DATA_SIZE 0x1000
 
 // This is a sample application that demonstrates the use of the PyKVM.

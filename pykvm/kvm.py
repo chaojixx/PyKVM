@@ -367,11 +367,11 @@ def main():
 
     # TODO: make log level configurable
     parser = ArgumentParser()
-    parser.add_argument('--memsize', type=lambda x: int(x, 0), default=0x20000, help='Size of guest memory in bytes')
+    parser.add_argument('--memsize', type=lambda x: int(x, 0), default=0x40000, help='Size of guest memory in bytes')
     #parser.add_argument('--rip', type=lambda x: int(x, 0), default=0x0, help='Initial program counter')
     #parser.add_argument('--rsp', type=lambda x: int(x, 0), default=0xfff0, help='Initial stack pointer')
     parser.add_argument('--org', type=lambda x: int(x, 0), default=0x0, help='Load base of the binary')
-    parser.add_argument('--dump', type=lambda x: int(x, 0), default=0x1000, help='Address to dump when complete')
+    parser.add_argument('--dump', type=lambda x: int(x, 0), default=0x20000, help='Address to dump when complete')
     parser.add_argument('--dump-size', type=lambda x: int(x, 0), default=0x100, help='How many bytes to dump')
     parser.add_argument('binary', nargs=1, help='Raw binary file to load and execute (32-bit x86)')
     args = parser.parse_args()

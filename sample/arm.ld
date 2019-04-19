@@ -23,6 +23,13 @@
 OUTPUT_FORMAT(elf32-littlearm)
 OUTPUT_ARCH(arm)
 
+/* Linker script to configure memory regions. */
+MEMORY
+{
+  FLASH (rwx)  : ORIGIN = 0x00000000, LENGTH = 16K
+  RAM   (rwx) : ORIGIN = 0x20000, LENGTH = 64K
+}
+
 
 /* Entry Point */
 ENTRY(Reset_Handler)
@@ -34,20 +41,20 @@ SECTIONS
             KEEP(*(.isr_vector))
             _text_start = .;
             *(.text)
+            *(.rodata);
             _text_end = .;
-        }
+        } > FLASH
 
         .data :
         {
             _data_start = .;
-            *(.rodata);
             *(.data);
             *(.bss);
             *(COMMON);
             _data_end = .;
-        }
+        } > RAM
 
 
-        __StackTop = 0x20000;
+        __StackTop = ORIGIN(RAM) + LENGTH(RAM);
         _end = .;
 }
